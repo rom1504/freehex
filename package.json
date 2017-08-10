@@ -1,0 +1,25 @@
+{
+  "name": "freehex",
+  "version": "1.0.0",
+  "description": "An hex game",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "gh-publish": "git checkout gh-pages && git merge master && git rm -rf node_modules && npm install && git add -f node_modules && git commit -m 'publish' ; git push origin gh-pages && git checkout master && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rom1504/freehex.git"
+  },
+  "keywords": [
+    "Hex"
+  ],
+  "author": "Romain Beaumont <romain.rom1@gmail.com> (<romain.rom1@gmail.com>)",
+  "license": "MIT",
+  "dependencies": {
+    "pixi.js": "^4.5.4"
+  },
+  "devDependencies": {
+    "http-server": "^0.10.0"
+  }
+}

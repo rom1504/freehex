@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Freehex</title>
+
+    <style>* {padding: 0; margin: 0}</style>
+</head>
+<body>
+<script src="/node_modules/pixi.js/dist/pixi.js"></script>
+
+<script>
+  //Create the renderer
+  const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight);
+  renderer.view.style.position = "absolute";
+  renderer.view.style.display = "block";
+  renderer.autoResize = true;
+
+  document.body.appendChild(renderer.view);
+  const stage = new PIXI.Container();
+
+  const lineWidth=window.innerWidth+400;
+  const lineHeight=window.innerHeight+400;
+  const hexWidth=75;
+  const hexHeight=64;
+
+  let columnType=0;
+  for(let x=-200+hexWidth;x<lineWidth;x+=hexWidth-9) {
+    for(let y=-200+(columnType===0 ? (hexHeight+8)/2 : hexHeight+8);y<lineHeight;y+=hexHeight+8) {
+      const hex = new PIXI.Graphics();
+      hex.beginFill(0x666666);
+
+      const hexagonRadius=hexWidth/2;
+      const hexagonHeight=hexHeight;
+      hex.drawPolygon([
+        -hexagonRadius, 0,
+        -hexagonRadius/2, hexagonHeight/2,
+        hexagonRadius/2, hexagonHeight/2,
+        hexagonRadius, 0,
+        hexagonRadius/2, -hexagonHeight/2,
+        -hexagonRadius/2, -hexagonHeight/2,
+      ]);
+      hex.endFill();
+
+      hex.x = x;
+      hex.y = y;
+
+      stage.addChild(hex);
+    }
+
+    columnType=columnType===0 ? 1 : 0;
+  }
+
+  renderer.render(stage);
+</script>
+</body>
+</html>

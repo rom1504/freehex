@@ -1,0 +1,3 @@
+# freehex
+
+An hex game
