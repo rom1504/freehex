@@ -10,7 +10,6 @@
 <script src="node_modules/pixi.js/dist/pixi.js"></script>
 
 <script>
-  //Create the renderer
   const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight,{antialias: true});
   renderer.view.style.position = "absolute";
   renderer.view.style.display = "block";
@@ -18,40 +17,86 @@
 
   document.body.appendChild(renderer.view);
   const stage = new PIXI.Container();
+  const mainStage = new PIXI.Container();
+  stage.addChild(mainStage);
 
   const lineWidth=window.innerWidth+400;
   const lineHeight=window.innerHeight+400;
   const hexWidth=75;
   const hexHeight=64;
 
+  const hex = new PIXI.Graphics();
+  hex.beginFill(0x666666);
+
+  const hexagonRadius=hexWidth/2;
+  const hexagonHeight=hexHeight;
+  hex.drawPolygon([
+    -hexagonRadius, 0,
+    -hexagonRadius/2, hexagonHeight/2,
+    hexagonRadius/2, hexagonHeight/2,
+    hexagonRadius, 0,
+    hexagonRadius/2, -hexagonHeight/2,
+    -hexagonRadius/2, -hexagonHeight/2,
+  ]);
+  hex.endFill();
+
+
   let columnType=0;
   for(let x=-200+hexWidth;x<lineWidth;x+=hexWidth-9) {
     for(let y=-200+(columnType===0 ? (hexHeight+8)/2 : hexHeight+8);y<lineHeight;y+=hexHeight+8) {
-      const hex = new PIXI.Graphics();
-      hex.beginFill(0x666666);
 
-      const hexagonRadius=hexWidth/2;
-      const hexagonHeight=hexHeight;
-      hex.drawPolygon([
-        -hexagonRadius, 0,
-        -hexagonRadius/2, hexagonHeight/2,
-        hexagonRadius/2, hexagonHeight/2,
-        hexagonRadius, 0,
-        hexagonRadius/2, -hexagonHeight/2,
-        -hexagonRadius/2, -hexagonHeight/2,
-      ]);
-      hex.endFill();
+      const myHex=hex.clone();
 
-      hex.x = x;
-      hex.y = y;
+      myHex.x = x;
+      myHex.y = y;
 
-      stage.addChild(hex);
+      mainStage.addChild(myHex);
     }
 
     columnType=columnType===0 ? 1 : 0;
   }
 
-  renderer.render(stage);
+  const circle = new PIXI.Graphics();
+  circle.beginFill(0x9966FF);
+  circle.drawCircle(0, 0, 32);
+  circle.endFill();
+  circle.x = window.innerWidth/2;
+  circle.y = window.innerHeight/2;
+  stage.addChild(circle);
+
+  stage.interactive = true;
+
+  let pos;
+  stage.on("mousemove", (e) =>  {
+    pos=e.data.getLocalPosition(stage);
+
+  });
+  const v=5;
+
+  function play() {
+
+    if(pos) {
+      const a=pos.x - circle.x;
+      const b=pos.y - circle.y;
+      const c=Math.sqrt(a*a+b*b);
+      const x=a/c;
+      const y=b/c;
+      mainStage.x -= v*x;
+      mainStage.y -= v*y;
+    }
+  }
+
+  let state;
+
+  state=play;
+
+  function gameLoop() {
+    requestAnimationFrame(gameLoop);
+    state();
+    renderer.render(stage);
+  }
+
+  gameLoop();
 </script>
 </body>
 </html>
