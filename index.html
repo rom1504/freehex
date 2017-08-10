@@ -11,7 +11,7 @@
 
 <script>
   //Create the renderer
-  const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight);
+  const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight,{antialias: true});
   renderer.view.style.position = "absolute";
   renderer.view.style.display = "block";
   renderer.autoResize = true;
