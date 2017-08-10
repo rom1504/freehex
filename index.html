@@ -22,8 +22,8 @@
 
   const lineWidth=window.innerWidth+400;
   const lineHeight=window.innerHeight+400;
-  const hexWidth=75;
-  const hexHeight=64;
+  const hexWidth=54;
+  const hexHeight=46;
 
   const hex = new PIXI.Graphics();
   hex.beginFill(0x666666);
@@ -58,7 +58,7 @@
 
   const circle = new PIXI.Graphics();
   circle.beginFill(0x9966FF);
-  circle.drawCircle(0, 0, 32);
+  circle.drawCircle(0, 0, 23);
   circle.endFill();
   circle.x = window.innerWidth/2;
   circle.y = window.innerHeight/2;
@@ -71,11 +71,12 @@
     pos=e.data.getLocalPosition(stage);
 
   });
-  const v=5;
+  const v=3;
+  const go=true;
 
   function play() {
 
-    if(pos) {
+    if(pos && go) {
       const a=pos.x - circle.x;
       const b=pos.y - circle.y;
       const c=Math.sqrt(a*a+b*b);
