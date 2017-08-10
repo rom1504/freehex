@@ -64,6 +64,17 @@
   circle.y = window.innerHeight/2;
   stage.addChild(circle);
 
+
+  const marker = new PIXI.Graphics();
+  const point = new PIXI.Point(circle.x-mainStage.x, circle.y-mainStage.y);
+  marker.clear().beginFill(0xffd900);
+  marker.lineStyle(20, 0xffd900, 1);
+  marker.moveTo(point.x, point.y);
+  marker.lineTo(point.x, point.y);
+  oldPoint = oldMidPoint = point;
+
+  mainStage.addChild(marker);
+
   stage.interactive = true;
 
   let pos;
@@ -84,6 +95,13 @@
       const y=b/c;
       mainStage.x -= v*x;
       mainStage.y -= v*y;
+
+      const point = new PIXI.Point(circle.x-mainStage.x, circle.y-mainStage.y);
+      const midPoint = new PIXI.Point(oldPoint.x + point.x >> 1, oldPoint.y + point.y >> 1);
+      marker.moveTo(midPoint.x, midPoint.y);
+      marker.quadraticCurveTo(oldPoint.x, oldPoint.y, oldMidPoint.x, oldMidPoint.y);
+      oldMidPoint = midPoint;
+      oldPoint = point;
     }
   }
 
