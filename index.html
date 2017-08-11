@@ -25,22 +25,27 @@
   const hexWidth=54;
   const hexHeight=46;
 
+  function getHexPath(hexagonRadius,hexagonHeight) {
+    return [
+      -hexagonRadius, 0,
+      -hexagonRadius/2, hexagonHeight/2,
+      hexagonRadius/2, hexagonHeight/2,
+      hexagonRadius, 0,
+      hexagonRadius/2, -hexagonHeight/2,
+      -hexagonRadius/2, -hexagonHeight/2,
+    ];
+  }
+
   const hex = new PIXI.Graphics();
   hex.beginFill(0x666666);
 
   const hexagonRadius=hexWidth/2;
   const hexagonHeight=hexHeight;
-  hex.drawPolygon([
-    -hexagonRadius, 0,
-    -hexagonRadius/2, hexagonHeight/2,
-    hexagonRadius/2, hexagonHeight/2,
-    hexagonRadius, 0,
-    hexagonRadius/2, -hexagonHeight/2,
-    -hexagonRadius/2, -hexagonHeight/2,
-  ]);
+  hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
   hex.endFill();
 
 
+  const hexes=[];
   let columnType=0;
   for(let x=-200+hexWidth;x<lineWidth;x+=hexWidth-9) {
     for(let y=-200+(columnType===0 ? (hexHeight+8)/2 : hexHeight+8);y<lineHeight;y+=hexHeight+8) {
@@ -51,9 +56,35 @@
       myHex.y = y;
 
       mainStage.addChild(myHex);
+      hexes.push(myHex);
     }
 
     columnType=columnType===0 ? 1 : 0;
+  }
+
+
+  function changeHexState(hex,state) {
+    if(hex.state === state)
+      return;
+    hex.state=state;
+    if(state==="empty") {
+      hex.clear();
+      hex.beginFill(0x666666);
+      hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
+      hex.endFill();
+    }
+    if(state==="going") {
+      hex.clear();
+      hex.beginFill(0x660000);
+      hex.drawPolygon(getHexPath(hexagonRadius+3,hexagonHeight+3));
+      hex.endFill();
+      hex.beginFill(0x666666);
+      hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
+      hex.endFill();
+    }
+    if(state==="full") {
+
+    }
   }
 
   const circle = new PIXI.Graphics();
@@ -63,7 +94,6 @@
   circle.x = window.innerWidth/2;
   circle.y = window.innerHeight/2;
   stage.addChild(circle);
-
 
   const marker = new PIXI.Graphics();
   const point = new PIXI.Point(circle.x-mainStage.x, circle.y-mainStage.y);
@@ -100,9 +130,26 @@
       const midPoint = new PIXI.Point(oldPoint.x + point.x >> 1, oldPoint.y + point.y >> 1);
       marker.moveTo(midPoint.x, midPoint.y);
       marker.quadraticCurveTo(oldPoint.x, oldPoint.y, oldMidPoint.x, oldMidPoint.y);
+
       oldMidPoint = midPoint;
       oldPoint = point;
+
+      checkCollision();
     }
+  }
+
+
+  function checkCollision() {
+    hexes.forEach(hex => {
+      if(hex.containsPoint(new PIXI.Point(circle.x,circle.y))) {
+
+        console.log("I have been breached at",hex.x,hex.y);
+        console.log(new PIXI.Point(circle.x-mainStage.x,circle.y-mainStage.y));
+
+        changeHexState(hex,"going");
+
+      }
+    })
   }
 
   let state;
