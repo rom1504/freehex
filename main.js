@@ -1,7 +1,6 @@
 const PIXI=require("pixi.js");
 const crosses=require('robust-segment-intersect');
 
-
 const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight,{antialias: true});
 renderer.view.style.position = "absolute";
 renderer.view.style.display = "block";
@@ -26,7 +25,7 @@ gameOverScene.addChild(message);
 gameOverScene.visible=false;
 stage.addChild(gameOverScene);
 
-
+const myColor=0x990000;
 
 
 const mainStage = new PIXI.Container();
@@ -47,31 +46,57 @@ function getHexPath(hexagonRadius,hexagonHeight) {
     -hexagonRadius/2, -hexagonHeight/2,
   ];
 }
-
-const hex = new PIXI.Graphics();
-hex.beginFill(0x666666);
-
 const hexagonRadius=hexWidth/2;
 const hexagonHeight=hexHeight;
+
+const hex = new PIXI.Graphics();
+hex.beginFill(0x000000);
+hex.drawPolygon(getHexPath(hexagonRadius+4,hexagonHeight+8));
+hex.endFill();
+hex.beginFill(0x666666);
 hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
 hex.endFill();
 
+const fill = require('flood-fill');
+const zero = require('zeros');
+const process = require('process');
+const grid = zero([50, 50]);
 
 const hexes=[];
+const hexByIndex={};
 let columnType=0;
+let xIndex=0;
+let yIndex=0;
 for(let x=-200+hexWidth;x<lineWidth;x+=hexWidth-9) {
+  yIndex=0;
   for(let y=-200+(columnType===0 ? (hexHeight+8)/2 : hexHeight+8);y<lineHeight;y+=hexHeight+8) {
 
     const myHex=hex.clone();
 
     myHex.x = x;
     myHex.y = y;
+    myHex.state="empty";
+    myHex.xIndex=xIndex;
+    myHex.yIndex=yIndex;
+    hexByIndex[xIndex+","+yIndex]=myHex;
 
     mainStage.addChild(myHex);
     hexes.push(myHex);
+
+    if(x>window.innerWidth/2-hexWidth && x<window.innerWidth/2+hexWidth &&
+      y+40>window.innerHeight/2-hexHeight && y<window.innerHeight/2+hexHeight) {
+      changeHexState(myHex,"full");
+    }
+    yIndex++;
   }
 
   columnType=columnType===0 ? 1 : 0;
+  xIndex++;
+}
+console.log("size",xIndex,yIndex);
+
+function reset() {
+
 }
 
 
@@ -79,28 +104,45 @@ function changeHexState(hex,state) {
   if(hex.state === state)
     return;
   hex.state=state;
+
+  hex.clear();
+  hex.beginFill(0x000000);
+  hex.drawPolygon(getHexPath(hexagonRadius+4,hexagonHeight+8));
+  hex.endFill();
   if(state==="empty") {
-    hex.clear();
     hex.beginFill(0x666666);
     hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
     hex.endFill();
   }
   if(state==="going") {
-    hex.clear();
-    hex.beginFill(0x660000);
+    hex.beginFill(myColor);
     hex.drawPolygon(getHexPath(hexagonRadius+3,hexagonHeight+3));
     hex.endFill();
     hex.beginFill(0x666666);
     hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
     hex.endFill();
+    grid.set(hex.xIndex, hex.yIndex, 1);
   }
   if(state==="full") {
-
+    hex.beginFill(myColor);
+    hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
+    hex.endFill();
+    grid.set(hex.xIndex, hex.yIndex, 1);
+  }
+  if(state==="debug1") {
+    hex.beginFill(0x0000FF);
+    hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
+    hex.endFill();
+  }
+  if(state==="debug2") {
+    hex.beginFill(0x00FF00);
+    hex.drawPolygon(getHexPath(hexagonRadius,hexagonHeight));
+    hex.endFill();
   }
 }
 
 const circle = new PIXI.Graphics();
-circle.beginFill(0x9966FF);
+circle.beginFill(myColor);
 circle.drawCircle(0, 0, 23);
 circle.endFill();
 circle.x = window.innerWidth/2;
@@ -108,13 +150,19 @@ circle.y = window.innerHeight/2;
 gameScene.addChild(circle);
 
 const marker = new PIXI.Graphics();
-const lines=[];
+let lines=[];
 const point = new PIXI.Point(circle.x-mainStage.x, circle.y-mainStage.y);
-marker.clear().beginFill(0xffd900);
-marker.lineStyle(20, 0xffd900, 1);
+marker.clear().beginFill(myColor);
+marker.lineStyle(20, myColor, 1);
 marker.moveTo(point.x, point.y);
 marker.lineTo(point.x, point.y);
 let oldPoint = point;
+
+function resetMarker() {
+  lines=[];
+  marker.clear().beginFill(myColor);
+  marker.lineStyle(20, myColor, 1);
+}
 
 mainStage.addChild(marker);
 
@@ -161,13 +209,32 @@ function gameOver() {
 
 }
 
+let inside=true;
+
+function oneGoing() {
+  return hexes.filter(hex => hex.state==="going").length!==0;
+}
+
 function checkHexCollision() {
   hexes.forEach(hex => {
     if(hex.containsPoint(new PIXI.Point(circle.x,circle.y))) {
 
       //console.log("I have been breached at",hex.x,hex.y);
 
-      changeHexState(hex,"going");
+
+      if(hex.state==="full" && !inside && oneGoing()) {
+        checkGroup(hex);
+      }
+
+
+      if(hex.state==="full") {
+        resetMarker();
+      }
+
+      if(hex.state === "empty") {
+        inside=false;
+        changeHexState(hex, "going");
+      }
 
     }
   })
@@ -190,6 +257,80 @@ function checkLineCollision(currentLine) {
       state=gameOver;
     }
   });
+}
+
+
+function checkGroup(startingHex) {
+  console.log("I went back to",startingHex.x,startingHex.y);
+
+  const t=(ref,i,j) => hexByIndex[(ref.xIndex+i)+","+(ref.yIndex+j)];
+
+  function getDirection(ref,state) {
+    const results=[];
+    for(let i=-1;i<=1;i++) {
+      for(let j=-1;j<=1;j++) {
+        if(t(ref,i,j).state===state) {
+          results.push({i,j});
+        }
+      }
+    }
+    return results;
+  }
+
+  function getInsidePoint() {
+    const {i,j}=getDirection(startingHex,"going")[0];
+    const results=getDirection(t(startingHex,i,j),"empty");
+    const correct=results.filter(({i:i2,j:j2}) => {
+      for(let i3=1;i3<50;i3++) {
+        const c=t(startingHex,i+i2*i3,j+j2*i3);
+        if(c && c.state==="going") {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    //changeHexState(t(startingHex,i,j),"debug1");
+    if(correct.length===0)
+      return null;
+    return {i:i+correct[0].i,j:j+correct[0].j};
+  }
+
+  const result=getInsidePoint();
+  if(result!== null) {
+
+    const {i,j}=result;
+
+
+    console.log("the truth",i,j,t(startingHex,i,j).state);
+
+    //changeHexState(t(startingHex,i,j),"debug2");
+
+    const height = grid.shape[1];
+    const width = grid.shape[0];
+
+    fill(grid, startingHex.xIndex+i, startingHex.yIndex+j, 2);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if(hexByIndex[x+","+y] && grid.get(x, y)===2)
+          changeHexState(hexByIndex[x+","+y],"full");
+      }
+    }
+  }
+
+  //state=() => {};
+  //return;
+
+  hexes.forEach(hex => {
+    if(hex.state!=="going")
+      return;
+    changeHexState(hex,"full");
+  });
+
+
+
+  inside=true;
+  resetMarker();
 }
 
 
