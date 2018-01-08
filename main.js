@@ -64,12 +64,12 @@ const grid = zero([50, 50]);
 
 const hexes=[];
 const hexByIndex={};
-let columnType=0;
+
 let xIndex=0;
 let yIndex=0;
 for(let x=-200+hexWidth;x<lineWidth;x+=hexWidth-9) {
   yIndex=0;
-  for(let y=-200+(columnType===0 ? (hexHeight+8)/2 : hexHeight+8);y<lineHeight;y+=hexHeight+8) {
+  for(let y=-200+(xIndex%2===0 ? (hexHeight+8)/2 : hexHeight+8);y<lineHeight;y+=hexHeight+8) {
 
     const myHex=hex.clone();
 
@@ -89,11 +89,21 @@ for(let x=-200+hexWidth;x<lineWidth;x+=hexWidth-9) {
     }
     yIndex++;
   }
-
-  columnType=columnType===0 ? 1 : 0;
   xIndex++;
 }
 console.log("size",xIndex,yIndex);
+
+
+const t=(ref,i,j) => hexByIndex[(ref.xIndex+i)+","+(ref.yIndex+j)];
+
+const gn=[[0,-1],[0,1],[-1,-1],[-1,0],[1,-1],[1,0]]; // row on the left is moved 1 down
+const ln=[[0,-1],[0,1],[-1,0],[-1,1],[1,0],[1,1]]; // row on the left is moved 1 up
+
+function neighboors(hex) {
+  let mn=hex.xIndex%2===0 ? gn : ln ;
+  return mn.map(([x,y]) => t(hex,x,y));
+}
+
 
 function reset() {
 
@@ -172,6 +182,18 @@ let pos;
 gameScene.on("mousemove", (e) =>  {
   pos=e.data.getLocalPosition(gameScene);
 
+});
+
+const debugClick=false;
+
+
+if(debugClick) gameScene.on("mousedown", e => {
+  hexes.forEach(hex => {
+    if(hex.containsPoint(e.data.getLocalPosition(gameScene))) {
+      neighboors(hex).forEach(hex => {
+        changeHexState(hex,"debug2");
+      })
+    }});
 });
 const v=3;
 const go=true;
@@ -259,22 +281,50 @@ function checkLineCollision(currentLine) {
   });
 }
 
+// algo :
+function fillItUp(startingPoint) {
+  state=() => {};
+  changeHexState(startingPoint,"debug2");
+  const visited={};
+  const hasBeenVisited=(hex) => visited[hex.xIndex+","+hex.yIndex];
+  const markVisited=(hex) => visited[hex.xIndex+","+hex.yIndex]=true;
+  const toFill=[];
+  try {
+    aux(startingPoint);
+  }
+  catch(err) {
+    if(err.message === "out") {
+      console.log("we're out")
+      return;
+    }
+  }
+
+
+  function aux(startingPoint) {
+    neighboors(startingPoint).forEach(hex => {
+      if(!hex) {
+        throw new Error("out");
+      }
+      if(hasBeenVisited(hex))
+        return;
+      const state = hex.state;
+      toFill.push(hex);
+      markVisited(hex);
+      if (state === "empty")
+        aux(hex);
+    })
+  }
+  console.log(toFill.map(hex => ({i:hex.xIndex-startingPoint.xIndex,j:hex.yIndex-startingPoint.yIndex})));
+  toFill.forEach(hex => changeHexState(hex,"full"));
+}
+
 
 function checkGroup(startingHex) {
   console.log("I went back to",startingHex.x,startingHex.y);
 
-  const t=(ref,i,j) => hexByIndex[(ref.xIndex+i)+","+(ref.yIndex+j)];
 
   function getDirection(ref,state) {
-    const results=[];
-    for(let i=-1;i<=1;i++) {
-      for(let j=-1;j<=1;j++) {
-        if(t(ref,i,j).state===state) {
-          results.push({i,j});
-        }
-      }
-    }
-    return results;
+    return neighboors(ref).filter(hex => hex.state === state).map(hex => ({i:hex.xIndex-startingHex.xIndex,j:hex.yIndex-startingHex.yIndex}));
   }
 
   function getInsidePoint() {
@@ -290,7 +340,7 @@ function checkGroup(startingHex) {
       return false;
     });
 
-    //changeHexState(t(startingHex,i,j),"debug1");
+    changeHexState(t(startingHex,i,j),"debug1");
     if(correct.length===0)
       return null;
     return {i:i+correct[0].i,j:j+correct[0].j};
@@ -304,8 +354,9 @@ function checkGroup(startingHex) {
 
     console.log("the truth",i,j,t(startingHex,i,j).state);
 
-    //changeHexState(t(startingHex,i,j),"debug2");
+    changeHexState(t(startingHex,i,j),"debug2");
 
+    /*
     const height = grid.shape[1];
     const width = grid.shape[0];
 
@@ -315,7 +366,9 @@ function checkGroup(startingHex) {
         if(hexByIndex[x+","+y] && grid.get(x, y)===2)
           changeHexState(hexByIndex[x+","+y],"full");
       }
-    }
+    }*/
+
+    fillItUp(t(startingHex,i,j));
   }
 
   //state=() => {};
@@ -337,6 +390,8 @@ function checkGroup(startingHex) {
 let state;
 
 state=play;
+
+//state=() => {};
 
 function gameLoop() {
   requestAnimationFrame(gameLoop);
